@@ -47,16 +47,16 @@ class DanamonParser extends BaseParser {
         if (!month && metadata.filename) month = this.extractMonth(metadata.filename);
 
         // Opening/Closing Balance
-        const openMatch = allText.match(/Opening\s*Balance\s*[:\.]?\s*([\d][\d\.,]*[\.,]\d{2})/i);
+        const openMatch = allText.match(/Opening\s*Balance\s*[:\.]?\s*([\d,]+\.\d{2})/i);
         if (openMatch) openingBalance = this.parseAmount(openMatch[1]);
 
-        const closeMatch = allText.match(/Closing\s*Balance\s*[:\.]?\s*([\d][\d\.,]*[\.,]\d{2})/i);
+        const closeMatch = allText.match(/Closing\s*Balance\s*[:\.]?\s*([\d,]+\.\d{2})/i);
         if (closeMatch) closingBalance = this.parseAmount(closeMatch[1]);
 
-        const totalDebitMatch = allText.match(/Total\s*Debit\s*Amt\s*[:\.]?\s*([\d][\d\.,]*[\.,]\d{2})/i);
+        const totalDebitMatch = allText.match(/Total\s*Debit\s*Amt\s*[:\.]?\s*([\d,]+\.\d{2})/i);
         if (totalDebitMatch) totalDebit = this.parseAmount(totalDebitMatch[1]);
 
-        const totalCreditMatch = allText.match(/Total\s*Credit\s*Amt\s*[:\.]?\s*([\d][\d\.,]*[\.,]\d{2})/i);
+        const totalCreditMatch = allText.match(/Total\s*Credit\s*Amt\s*[:\.]?\s*([\d,]+\.\d{2})/i);
         if (totalCreditMatch) totalCredit = this.parseAmount(totalCreditMatch[1]);
 
         // Extract transactions
@@ -94,7 +94,7 @@ class DanamonParser extends BaseParser {
                     // Extract amounts from the line
                     // Pattern: description ... DEBIT CREDIT BALANCE
                     const amounts = [];
-                    const amountRegex = /([\d][\d\.,]*[\.,]\d{2})(?=\s|$|[A-Za-z])/g;
+                    const amountRegex = /([\d,]+\.\d{2})/g;
                     let match;
                     while ((match = amountRegex.exec(rest)) !== null) {
                         amounts.push({
