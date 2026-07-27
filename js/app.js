@@ -407,7 +407,54 @@ function groupByAccount(results) {
         if (!groups[key]) {
             groups[key] = { accountNo: r.accountNo, accountName: r.accountName, branch: r.branch, bankName: r.bankName, months: {} };
         }
-        if (r.month) groups[key].months[r.month] = r;
+        
+        // Auto-split multi-month PDFs based on transaction dates
+        const txnsByMonth = {};
+        for (const txn of r.transactions || []) {
+            let txnMonth = r.month;
+            if (txn.date && txn.date.includes('/')) {
+                const parts = txn.date.split('/');
+                if (parts.length >= 2) txnMonth = parseInt(parts[1], 10);
+            }
+            if (txnMonth) {
+                if (!txnsByMonth[txnMonth]) txnsByMonth[txnMonth] = [];
+                txnsByMonth[txnMonth].push(txn);
+            }
+        }
+        
+        const monthKeys = Object.keys(txnsByMonth);
+        if (monthKeys.length > 1) {
+            // Split into multiple months
+            let prevClose = r.openingBalance || 0;
+            
+            // Sort months numerically
+            monthKeys.sort((a, b) => parseInt(a) - parseInt(b)).forEach((mStr, idx) => {
+                const m = parseInt(mStr);
+                const mTxns = txnsByMonth[m];
+                let mDebit = 0, mCredit = 0;
+                mTxns.forEach(t => { mDebit += (t.debit||0); mCredit += (t.credit||0); });
+                
+                const mOpen = (idx === 0) ? (r.openingBalance || 0) : prevClose;
+                // Last month takes the parsed closing balance if available, otherwise calculate
+                const mClose = (idx === monthKeys.length - 1 && r.closingBalance) 
+                                ? r.closingBalance 
+                                : mOpen - mDebit + mCredit;
+                
+                prevClose = mClose;
+                
+                groups[key].months[m] = {
+                    ...r,
+                    month: m,
+                    transactions: mTxns,
+                    openingBalance: mOpen,
+                    closingBalance: mClose,
+                    totalDebit: mDebit,
+                    totalCredit: mCredit
+                };
+            });
+        } else if (r.month) {
+            groups[key].months[r.month] = r;
+        }
     }
     return Object.values(groups);
 }

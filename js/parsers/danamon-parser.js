@@ -86,7 +86,7 @@ class DanamonParser extends BaseParser {
 
                 // Transaction lines start with date: MM/DD MM/DD or DD/MM DD/MM
                 // Format: "01/01 01/01 0 B/F ... AMOUNT BALANCE"
-                const txnMatch = line.match(/^(\d{2}\/\d{2})\s+(\d{2}\/\d{2})\s+(\d+)\s+(.+)/);
+                const txnMatch = line.match(/^\s*(\d{2}[/l1I\.\-]\d{2})\s+(\d{2}[/l1I\.\-]\d{2})\s+(\d+)\s+(.+)/i);
                 if (txnMatch) {
                     const dateStr = txnMatch[1]; // MM/DD or DD/MM
                     const rest = txnMatch[4];
@@ -138,7 +138,7 @@ class DanamonParser extends BaseParser {
 
                         // Parse date - Danamon uses MM/DD format
                         let parsedDate = null;
-                        const dm = dateStr.match(/(\d{2})\/(\d{2})/);
+                        const dm = dateStr.match(/(\d{2})[/l1I\.\-](\d{2})/i);
                         if (dm && year) {
                             const d = parseInt(dm[1]);
                             const m = parseInt(dm[2]);
