@@ -250,6 +250,23 @@ async function processOnePDF(file, password, onProgress) {
             
             await page.render({ canvasContext: ctx, viewport }).promise;
             
+            // --- Image Preprocessing for better OCR ---
+            // Apply thresholding (binarization) to make text crisp black and background white
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            // A typical threshold for scanned bank statements is ~170. 
+            // Any pixel lighter than 170 becomes pure white, darker becomes pure black.
+            for (let j = 0; j < data.length; j += 4) {
+                // Grayscale average
+                const avg = (data[j] + data[j + 1] + data[j + 2]) / 3;
+                const color = avg > 160 ? 255 : 0; 
+                data[j] = color;     // R
+                data[j + 1] = color; // G
+                data[j + 2] = color; // B
+            }
+            ctx.putImageData(imageData, 0, 0);
+            // ------------------------------------------
+            
             // OCR with Tesseract.js
             if (!ocrWorker) {
                 onProgress(45, 'Memuat mesin OCR...');
