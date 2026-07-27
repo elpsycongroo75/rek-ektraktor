@@ -61,7 +61,7 @@ class BNIParser extends BaseParser {
         let totalCredit = 0;
 
         // Get Ledger Balance (opening balance)
-        const ledgerMatch = allText.match(/Ledger\s*Balance[:\s]*([\d,]+\.\d{2})/i);
+        const ledgerMatch = allText.match(/(?:Ledger|Beginning)\s*Balance[: ]*([\d,]+\.\d{2})/i);
         if (ledgerMatch) {
             openingBalance = this.parseAmount(ledgerMatch[1]);
         }
@@ -83,6 +83,13 @@ class BNIParser extends BaseParser {
         // Calculate totals
         totalDebit = transactions.reduce((sum, t) => sum + t.debit, 0);
         totalCredit = transactions.reduce((sum, t) => sum + t.credit, 0);
+        
+        if (openingBalance === 0 && transactions.length > 0 && transactions[0].balance > 0) {
+            const first = transactions[0];
+            const firstAmount = first.debit > 0 ? first.debit : -first.credit;
+            openingBalance = first.balance + firstAmount;
+        }
+        
         const closingBalance = transactions.length > 0 ? transactions[transactions.length - 1].balance : openingBalance;
 
         return this.formatResult({
@@ -154,18 +161,34 @@ class BNIParser extends BaseParser {
                 if (dateStr && rest) {
                     // Try to extract amount and D/K/C
                     // Pattern: BRANCH_INFO JOURNAL_NO DESCRIPTION AMOUNT D/K/C BALANCE
-                    const amountMatch = rest.match(/([\d,\.]+)\s+([DKC])\s+([\d,]+\.\d{2})\s*$/);
+                    let amountMatch = rest.match(/([\d,\.]+)\s+([DKC])\s+([\d,]+\.\d{2})\s*$/);
+                    let hasBalance = true;
+                    if (!amountMatch) {
+                        amountMatch = rest.match(/([\d,\.]+)\s+([DKC])\s*$/);
+                        hasBalance = false;
+                    }
                     
                     if (amountMatch) {
-                        let amount = this._fixBNIAmount(amountMatch[1]);
+                        let rawAmountStr = amountMatch[1];
+                        let amount = this._fixBNIAmount(rawAmountStr);
                         const isDebit = amountMatch[2] === 'D';
-                        const balance = this.parseAmount(amountMatch[3]);
+                        let balance = hasBalance ? this.parseAmount(amountMatch[3]) : 0;
+                        if (!hasBalance && transactions.length > 0) {
+                            const prevTxn = transactions[transactions.length - 1];
+                            balance = prevTxn.balance + (isDebit ? -amount : amount);
+                        }
 
                         // Get description part
                         let desc = rest.substring(0, amountMatch.index).trim();
                         
                         // FIX for Credit transactions where amount is extracted as 0.00
+                        // AND for Debit transactions where Journal No is extracted instead of Amount
+                        let isAmountValid = /\.\d{2}$/.test(rawAmountStr) || /,\d{2}$/.test(rawAmountStr);
                         if (!isDebit && amount === 0) {
+                            isAmountValid = false;
+                        }
+
+                        if (!isAmountValid) {
                             const prevMatch = desc.match(/([\d,]+\.\d{2})\s*$/);
                             if (prevMatch) {
                                 amount = this._fixBNIAmount(prevMatch[1]);
