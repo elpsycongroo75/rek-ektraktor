@@ -146,12 +146,28 @@ class BNIParser extends BaseParser {
                     const amountMatch = rest.match(/([\d,\.]+)\s+([DK])\s+([\d,]+\.\d{2})\s*$/);
                     
                     if (amountMatch) {
-                        const amount = this._fixBNIAmount(amountMatch[1]);
+                        let amount = this._fixBNIAmount(amountMatch[1]);
                         const isDebit = amountMatch[2] === 'D';
                         const balance = this.parseAmount(amountMatch[3]);
 
                         // Get description part
                         let desc = rest.substring(0, amountMatch.index).trim();
+                        
+                        // FIX for Credit transactions where amount is extracted as 0.00
+                        if (!isDebit && amount === 0) {
+                            const prevMatch = desc.match(/([\d,]+\.\d{2})\s*$/);
+                            if (prevMatch) {
+                                amount = this._fixBNIAmount(prevMatch[1]);
+                                desc = desc.substring(0, prevMatch.index).trim();
+                            } else if (i > 0) {
+                                const prevLine = lines[i-1].trim();
+                                const prevLineMatch = prevLine.match(/([\d,]+\.\d{2})\s*$/);
+                                if (prevLineMatch) {
+                                    amount = this._fixBNIAmount(prevLineMatch[1]);
+                                }
+                            }
+                        }
+
                         // Remove branch info (DIVISI, etc.)
                         desc = desc.replace(/^(?:DIVISI\s+)?(?:TRANSACTI|OPERASIO)\w*\s*/i, '');
                         desc = desc.replace(/^\d+\s+/, ''); // Remove journal number
