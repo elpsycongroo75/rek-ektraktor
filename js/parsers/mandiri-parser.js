@@ -76,16 +76,16 @@ class MandiriParser extends BaseParser {
         if (!month && metadata.filename) month = this.extractMonth(metadata.filename);
 
         // Extract summary data
-        const summaryDebit = allText.match(/Mutasi\s+Debit.*?:\s*([\d,]+\.\d{2})/i);
+        const summaryDebit = allText.match(/Mutasi\s+Debit.*?:\s*([\d\.,]+[\.,]\d{2})/i);
         if (summaryDebit) totalDebit = this.parseAmount(summaryDebit[1]);
 
-        const summaryCredit = allText.match(/Mutasi\s+Kredit.*?:\s*([\d,]+\.\d{2})/i);
+        const summaryCredit = allText.match(/Mutasi\s+Kredit.*?:\s*([\d\.,]+[\.,]\d{2})/i);
         if (summaryCredit) totalCredit = this.parseAmount(summaryCredit[1]);
 
-        const summaryOpen = allText.match(/(?:Saldo\s+Awal|Previous\s+Balance)\s*[:\s]*([\d,]+\.\d{2})/i);
+        const summaryOpen = allText.match(/(?:Saldo\s+Awal|Previous\s+Balance)\s*[:\s]*([\d\.,]+[\.,]\d{2})/i);
         if (summaryOpen) openingBalance = this.parseAmount(summaryOpen[1]);
 
-        const summaryClose = allText.match(/(?:Saldo\s+Akhir|Current\s+Balance)\s*[:\s]*([\d,]+\.\d{2})/i);
+        const summaryClose = allText.match(/(?:Saldo\s+Akhir|Current\s+Balance)\s*[:\s]*([\d\.,]+[\.,]\d{2})/i);
         if (summaryClose) closingBalance = this.parseAmount(summaryClose[1]);
 
         // Extract transactions
@@ -112,7 +112,7 @@ class MandiriParser extends BaseParser {
             
             // Skip pages that are summary/cover pages
             if (lines.some(l => l.includes('Ringkasan / At a glance') || l.includes('Ringkasan Akun'))) {
-                if (!lines.some(l => l.match(/^\d{2}\/\d{2}\s+\d{2}\/\d{2}\s+/))) {
+                if (!lines.some(l => l.match(/^\d{2}\/\d{2}(?:\s+\d{2}\/\d{2})?\s+/))) {
                     continue;
                 }
             }
@@ -134,22 +134,23 @@ class MandiriParser extends BaseParser {
                 }
 
                 // Saldo Awal line: "01/01 Saldo Awal AMOUNT"
-                const saldoAwalMatch = line.match(/^.*?(\d{2}[/l1I\.\-]\d{2})\s+Saldo\s+Awal\s+([\d,]+\.\d{2})/i);
+                const saldoAwalMatch = line.match(/^(\d{2}\/\d{2})\s+Saldo\s+Awal\s+([\d\.,]+[\.,]\d{2})/i);
                 if (saldoAwalMatch) {
-                    const parsedOp = this.parseAmount(saldoAwalMatch[2]);
+                    openingBalance = this.parseAmount(saldoAwalMatch[2]);
                     transactions.push({
-                        date: saldoAwalMatch[1], // Store as string
+                        date: this.parseDate(saldoAwalMatch[1], year),
+                        dateStr: saldoAwalMatch[1],
                         description: 'Saldo Awal',
                         debit: 0,
                         credit: 0,
-                        balance: parsedOp
+                        balance: this.parseAmount(saldoAwalMatch[2])
                     });
                     i++;
                     continue;
                 }
 
-                // Transaction: "DD/MM DD/MM -description amount [D] balance"
-                const txnMatch = line.match(/^.*?(\d{2}[/l1I\.\-]\d{2})\s+(\d{2}[/l1I\.\-]\d{2})\s+(.+)/i);
+                // Transaction: "DD/MM DD/MM -description amount [D] balance" OR "DD/MM -description amount [D] balance"
+                const txnMatch = line.match(/^(\d{2}\/\d{2})(?:\s+(\d{2}\/\d{2}))?\s+(.+)/);
                 if (txnMatch) {
                     const dateStr = txnMatch[1];
                     let rest = txnMatch[3];
@@ -160,7 +161,7 @@ class MandiriParser extends BaseParser {
 
                     // Try extracting amount and balance from this line
                     // Pattern 1: description AMOUNT D BALANCE
-                    let m = rest.match(/^(.+?)\s+([\d,]+\.\d{2})\s+D\s+([\d,]+\.\d{2})\s*$/i);
+                    let m = rest.match(/^(.+?)\s+([\d\.,]+[\.,]\d{2})\s+D\s+([\d\.,]+[\.,]\d{2})\s*$/);
                     if (m) {
                         description = m[1].trim();
                         amount = this.parseAmount(m[2]);
@@ -168,7 +169,7 @@ class MandiriParser extends BaseParser {
                         balance = this.parseAmount(m[3]);
                     } else {
                         // Pattern 2: description AMOUNT BALANCE (credit)
-                        m = rest.match(/^(.+?)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/);
+                        m = rest.match(/^(.+?)\s+([\d\.,]+[\.,]\d{2})\s+([\d\.,]+[\.,]\d{2})\s*$/);
                         if (m) {
                             description = m[1].trim();
                             amount = this.parseAmount(m[2]);
@@ -176,14 +177,14 @@ class MandiriParser extends BaseParser {
                             balance = this.parseAmount(m[3]);
                         } else {
                             // Pattern 3: description AMOUNT D (no balance - continues next line)
-                            m = rest.match(/^(.+?)\s+([\d,]+\.\d{2})\s+D\s*$/);
+                            m = rest.match(/^(.+?)\s+([\d\.,]+[\.,]\d{2})\s+D\s*$/);
                             if (m) {
                                 description = m[1].trim();
                                 amount = this.parseAmount(m[2]);
                                 isDebit = true;
                             } else {
                                 // Pattern 4: description AMOUNT (credit, no balance)
-                                m = rest.match(/^(.+?)\s+([\d,]+\.\d{2})\s*$/);
+                                m = rest.match(/^(.+?)\s+([\d\.,]+[\.,]\d{2})\s*$/);
                                 if (m) {
                                     description = m[1].trim();
                                     amount = this.parseAmount(m[2]);
@@ -211,13 +212,13 @@ class MandiriParser extends BaseParser {
                         }
                         
                         // Check if this line has amount + balance
-                        const amtLine = nextLine.match(/^([\d,]+\.\d{2})\s+(D\s+)?([\d,]+\.\d{2})\s*$/);
+                        const amtLine = nextLine.match(/^([\d\.,]+[\.,]\d{2})\s+(D\s+)?([\d\.,]+[\.,]\d{2})\s*$/);
                         if (amtLine && amount === 0) {
                             amount = this.parseAmount(amtLine[1]);
                             isDebit = !!amtLine[2];
                             balance = this.parseAmount(amtLine[3]);
-                        } else if (nextLine.match(/^[\d,]+\.\d{2}\s+D?\s*$/) && balance === 0) {
-                            const valMatch = nextLine.match(/([\d,]+\.\d{2})/);
+                        } else if (nextLine.match(/^[\d\.,]+[\.,]\d{2}\s+D?\s*$/) && balance === 0) {
+                            const valMatch = nextLine.match(/([\d\.,]+[\.,]\d{2})/);
                             if (valMatch) {
                                 if (amount === 0) {
                                     amount = this.parseAmount(valMatch[1]);
@@ -248,11 +249,12 @@ class MandiriParser extends BaseParser {
 
                     if (amount > 0 || balance > 0) {
                         transactions.push({
-                            date: dateStr, // store as string for consistency with other parsers
-                            description: description,
+                            date: this.parseDate(dateStr, year),
+                            dateStr,
+                            description: description || 'N/A',
                             debit: isDebit ? amount : 0,
-                            credit: !isDebit ? amount : 0,
-                            balance: balance
+                            credit: isDebit ? 0 : amount,
+                            balance
                         });
                     }
 
