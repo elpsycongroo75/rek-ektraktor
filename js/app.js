@@ -236,9 +236,11 @@ async function processOnePDF(file, password, onProgress) {
         });
         text = lines.join('\n');
         
-        const isImage = text.replace(/\s/g, '').length < 50;
+        // If text length is very small, it's likely a scanned image PDF
+        const isImage = text.trim().length < 50;
         
-        if (isImage) {
+        // As requested by user, ONLY run OCR for Danamon
+        if (isImage && currentBank === 'danamon') {
             onProgress(45 + (i / numPages) * 45, `OCR halaman ${i}/${numPages} (image)...`);
             
             // Render page to canvas for OCR
@@ -253,16 +255,16 @@ async function processOnePDF(file, password, onProgress) {
             // --- Image Preprocessing for better OCR ---
             // Apply thresholding (binarization) to make text crisp black and background white
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
+            const dataBytes = imageData.data;
             // A typical threshold for scanned bank statements is ~170. 
             // Any pixel lighter than 170 becomes pure white, darker becomes pure black.
-            for (let j = 0; j < data.length; j += 4) {
+            for (let j = 0; j < dataBytes.length; j += 4) {
                 // Grayscale average
-                const avg = (data[j] + data[j + 1] + data[j + 2]) / 3;
+                const avg = (dataBytes[j] + dataBytes[j + 1] + dataBytes[j + 2]) / 3;
                 const color = avg > 160 ? 255 : 0; 
-                data[j] = color;     // R
-                data[j + 1] = color; // G
-                data[j + 2] = color; // B
+                dataBytes[j] = color;     // R
+                dataBytes[j + 1] = color; // G
+                dataBytes[j + 2] = color; // B
             }
             ctx.putImageData(imageData, 0, 0);
             // ------------------------------------------
@@ -277,8 +279,8 @@ async function processOnePDF(file, password, onProgress) {
                 });
             }
             
-            const { data } = await ocrWorker.recognize(canvas);
-            text = data.text;
+            const { data: ocrData } = await ocrWorker.recognize(canvas);
+            text = ocrData.text;
         }
         
         pages.push({ text, pageNum: i, tables: [], isImage });
