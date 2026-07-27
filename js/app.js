@@ -204,7 +204,8 @@ async function processOnePDF(file, password, onProgress) {
     // Load PDF with PDF.js
     const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        password: password || undefined
+        password: password || undefined,
+        standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/'
     });
     
     onProgress(5, `Membuka PDF: ${file.name}...`);
