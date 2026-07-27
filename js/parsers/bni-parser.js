@@ -135,15 +135,26 @@ class BNIParser extends BaseParser {
             let i = 0;
             while (i < lines.length) {
                 const line = lines[i].trim();
-                // Look for date patterns DD/MM/YYYY HH.MM.SS
-                const dateMatch = line.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\.\d{2}\.\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\.\d{2}\.\d{2})\s+(.+)/);
-                if (dateMatch) {
-                    const dateStr = dateMatch[1];
-                    let rest = dateMatch[5];
-                    
-                    // Try to extract amount and D/K
-                    // Pattern: BRANCH_INFO JOURNAL_NO DESCRIPTION AMOUNT D/K BALANCE
-                    const amountMatch = rest.match(/([\d,\.]+)\s+([DK])\s+([\d,]+\.\d{2})\s*$/);
+                // Format 1: DD/MM/YYYY HH.MM.SS DD/MM/YYYY HH.MM.SS
+                const dateMatch1 = line.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\.\d{2}\.\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\.\d{2}\.\d{2})\s+(.+)/);
+                // Format 2: ID DD/MM/YYYY TEXT
+                const dateMatch2 = line.match(/^(\d+)\s+(\d{2}\/\d{2}\/\d{4})\s+(.+)/);
+                
+                let dateStr = null;
+                let rest = null;
+                
+                if (dateMatch1) {
+                    dateStr = dateMatch1[1];
+                    rest = dateMatch1[5];
+                } else if (dateMatch2) {
+                    dateStr = dateMatch2[2];
+                    rest = dateMatch2[3];
+                }
+
+                if (dateStr && rest) {
+                    // Try to extract amount and D/K/C
+                    // Pattern: BRANCH_INFO JOURNAL_NO DESCRIPTION AMOUNT D/K/C BALANCE
+                    const amountMatch = rest.match(/([\d,\.]+)\s+([DKC])\s+([\d,]+\.\d{2})\s*$/);
                     
                     if (amountMatch) {
                         let amount = this._fixBNIAmount(amountMatch[1]);
