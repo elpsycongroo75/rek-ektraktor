@@ -161,21 +161,22 @@ class BNIParser extends BaseParser {
                 if (dateStr && rest) {
                     // Try to extract amount and D/K/C
                     // Pattern: BRANCH_INFO JOURNAL_NO DESCRIPTION AMOUNT D/K/C BALANCE
-                    let amountMatch = rest.match(/([\d,\.]+)\s+([DKC])\s+([\d,]+\.\d{2})\s*$/);
+                    let amountMatch = rest.match(/(?:([\d,\.]+)\s+)?([DKC])\s+([\d,]+\.\d{2})\s*$/);
                     let hasBalance = true;
                     if (!amountMatch) {
-                        amountMatch = rest.match(/([\d,\.]+)\s+([DKC])\s*$/);
+                        amountMatch = rest.match(/(?:([\d,\.]+)\s+)?([DKC])\s*$/);
                         hasBalance = false;
                     }
                     
                     if (amountMatch) {
-                        let rawAmountStr = amountMatch[1];
-                        let amount = this._fixBNIAmount(rawAmountStr);
+                        let rawAmountStr = amountMatch[1] || "";
+                        let amount = rawAmountStr ? this._fixBNIAmount(rawAmountStr) : 0;
                         const isDebit = amountMatch[2] === 'D';
                         let balance = hasBalance ? this.parseAmount(amountMatch[3]) : 0;
+                        
+                        // Fix for sometimes debit amount empty
                         if (!hasBalance && transactions.length > 0) {
-                            const prevTxn = transactions[transactions.length - 1];
-                            balance = prevTxn.balance + (isDebit ? -amount : amount);
+                            balance = 0; 
                         }
 
                         // Get description part
@@ -183,7 +184,7 @@ class BNIParser extends BaseParser {
                         
                         // FIX for Credit transactions where amount is extracted as 0.00
                         // AND for Debit transactions where Journal No is extracted instead of Amount
-                        let isAmountValid = /\.\d{2}$/.test(rawAmountStr) || /,\d{2}$/.test(rawAmountStr);
+                        let isAmountValid = rawAmountStr && (/\.\d{2}$/.test(rawAmountStr) || /,\d{2}$/.test(rawAmountStr));
                         if (!isDebit && amount === 0) {
                             isAmountValid = false;
                         }
@@ -223,6 +224,12 @@ class BNIParser extends BaseParser {
                                     }
                                 }
                             }
+                        }
+
+                        // If balance is still not found, calculate it from previous transaction
+                        if (!hasBalance && transactions.length > 0) {
+                            const prevTxn = transactions[transactions.length - 1];
+                            balance = prevTxn.balance + (isDebit ? -amount : amount);
                         }
 
                         // Remove branch info (DIVISI, etc.)
