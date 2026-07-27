@@ -130,35 +130,47 @@ class BSIParser extends BaseParser {
     }
 
     _parseFromText(pages, transactions, year) {
+        let lastDateStr = '';
+        
         for (const page of pages) {
             const text = page.text || '';
             const lines = text.split('\n');
             
             for (const line of lines) {
-                // Match: "1 31-01-2024 20.31 ..."
-                const m = line.match(/^\s*(\d+)\s+(\d{2}-\d{2}-\d{4})\s+\d{2}\.\d{2}\s+/);
-                if (m) {
-                    const dateStr = m[2];
-                    // Extract amounts from end of line
-                    const amounts = line.match(/([\d,]+\.\d{2}-?)/g);
-                    if (amounts && amounts.length >= 2) {
-                        const debit = this.parseAmount(amounts[amounts.length - 3] || '0');
-                        const credit = this.parseAmount(amounts[amounts.length - 2] || '0');
-                        const balance = this.parseAmount(amounts[amounts.length - 1]);
-
-                        // Extract description
-                        let desc = line.replace(/^\s*\d+\s+\d{2}-\d{2}-\d{4}\s+\d{2}\.\d{2}\s+\S+\s+/, '');
-                        desc = desc.replace(/([\d,]+\.\d{2}-?\s*)+$/, '').trim();
-
-                        transactions.push({
-                            date: this.parseDate(dateStr, year),
-                            dateStr,
-                            description: desc,
-                            debit,
-                            credit,
-                            balance
-                        });
+                // Track dates appearing on lines
+                const dateMatch = line.match(/(\d{2}-\d{2}-\d{4})/);
+                if (dateMatch) {
+                    lastDateStr = dateMatch[1];
+                }
+                
+                // Transactions end with 2 amounts and optional code
+                const amountsMatch = line.match(/([\d,]+\.\d{2}-?)\s+([\d,]+\.\d{2}-?)(?:\s+\d{3})?$/);
+                if (amountsMatch && !line.includes('Total') && !line.includes('Saldo riil')) {
+                    let amt1 = amountsMatch[1];
+                    let amt2 = amountsMatch[2];
+                    
+                    let debit = 0;
+                    let credit = 0;
+                    
+                    // BSI puts minus sign at the end for debits
+                    if (amt1.endsWith('-')) {
+                        debit = this.parseAmount(amt1.replace('-', ''));
+                    } else {
+                        credit = this.parseAmount(amt1);
                     }
+                    const balance = this.parseAmount(amt2.replace('-', ''));
+                    
+                    // Try to get some description from the line
+                    const descMatch = line.replace(/^\s*\d+\s+\S+\s+(.+?)\s+[\d,]+\.\d{2}-?\s+[\d,]+\.\d{2}-?/, '$1').trim();
+                    
+                    transactions.push({
+                        date: this.parseDate(lastDateStr, year),
+                        dateStr: lastDateStr,
+                        description: descMatch || 'Mutasi',
+                        debit,
+                        credit,
+                        balance
+                    });
                 }
             }
         }
