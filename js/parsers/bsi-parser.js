@@ -36,7 +36,7 @@ class BSIParser extends BaseParser {
         if (branchMatch) branch = branchMatch[1].trim();
 
         // Periode : 01/01/2024 s/d 31/01/2024
-        const periodMatch = allText.match(/Periode\s*:\s*(.+)/i);
+        const periodMatch = allText.match(/(\d{2}\/\d{2}\/\d{4}\s*s\/d\s*\d{2}\/\d{2}\/\d{4})/i);
         if (periodMatch) {
             period = periodMatch[1].trim();
             year = this.extractYear(period);
@@ -144,7 +144,7 @@ class BSIParser extends BaseParser {
                 }
                 
                 // Transactions end with 2 amounts and optional code
-                const amountsMatch = line.match(/([\d,]+\.\d{2}-?)\s+([\d,]+\.\d{2}-?)(?:\s+\d{3})?$/);
+                const amountsMatch = line.match(/([\d,]+\.\d{2}-?)\s+([\d,]+\.\d{2}-?)(?:\s+\d{3})?\s*$/);
                 if (amountsMatch && !line.includes('Total') && !line.includes('Saldo riil')) {
                     let amt1 = amountsMatch[1];
                     let amt2 = amountsMatch[2];
