@@ -452,8 +452,17 @@ function groupByAccount(results) {
                     totalCredit: mCredit
                 };
             });
+        } else if (monthKeys.length === 1) {
+            const m = parseInt(monthKeys[0]);
+            r.month = m;
+            groups[key].months[m] = r;
         } else if (r.month) {
             groups[key].months[r.month] = r;
+        } else {
+            // Default to month 1 (January) if absolutely no month can be determined
+            // This prevents the entire file from silently disappearing from the UI
+            r.month = 1;
+            groups[key].months[1] = r;
         }
     }
     return Object.values(groups);
