@@ -189,15 +189,38 @@ class BNIParser extends BaseParser {
                         }
 
                         if (!isAmountValid) {
-                            const prevMatch = desc.match(/([\d,]+\.\d{2})\s*$/);
-                            if (prevMatch) {
-                                amount = this._fixBNIAmount(prevMatch[1]);
-                                desc = desc.substring(0, prevMatch.index).trim();
+                            let targetText = "";
+                            let foundInDesc = false;
+                            
+                            // Check description first
+                            if (desc.match(/[\d,]+\.\d{2}/)) {
+                                targetText = desc;
+                                foundInDesc = true;
                             } else if (i > 0) {
-                                const prevLine = lines[i-1].trim();
-                                const prevLineMatch = prevLine.match(/([\d,]+\.\d{2})\s*$/);
-                                if (prevLineMatch) {
-                                    amount = this._fixBNIAmount(prevLineMatch[1]);
+                                targetText = lines[i-1].trim();
+                            }
+
+                            if (targetText) {
+                                const nums = targetText.match(/([\d,]+\.\d{2})/g);
+                                if (nums && nums.length > 0) {
+                                    amount = this._fixBNIAmount(nums[0]);
+                                    
+                                    if (!hasBalance) {
+                                        if (nums.length === 3) {
+                                            hasBalance = true;
+                                            balance = this.parseAmount(nums[2]);
+                                        } else if (nums.length === 2 && nums[0] !== nums[1]) {
+                                            hasBalance = true;
+                                            balance = this.parseAmount(nums[1]);
+                                        }
+                                    }
+                                    
+                                    if (foundInDesc) {
+                                        const firstNumIdx = desc.indexOf(nums[0]);
+                                        if (firstNumIdx > -1) {
+                                            desc = desc.substring(0, firstNumIdx).trim();
+                                        }
+                                    }
                                 }
                             }
                         }
