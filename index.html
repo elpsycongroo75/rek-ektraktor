@@ -112,120 +112,6 @@
                     </div>
                 </div>
                 <div class="info-cards" id="infoCards"></div>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="RekBank Extractor - Konversi PDF Rekening Koran ke Excel untuk BCA, BNI, BSI, Danamon, Mandiri, dan Bank Jakarta. 100% client-side, data tidak dikirim ke server.">
-    <title>RekBank Extractor - PDF Rekening Koran to Excel</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-left">
-                <div class="logo">
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                        <rect width="32" height="32" rx="8" fill="#2563EB"/>
-                        <path d="M8 10h16M8 16h12M8 22h14" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-                        <circle cx="24" cy="22" r="4" fill="#60A5FA" stroke="white" stroke-width="1.5"/>
-                        <path d="M23 22l1 1 2-2" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="app-title">RekBank Extractor</h1>
-                    <p class="app-subtitle">PDF Rekening Koran → Excel</p>
-                </div>
-            </div>
-        </header>
-
-        <!-- Bank Tabs -->
-        <nav class="bank-tabs" id="bankTabs">
-            <button class="bank-tab active" data-bank="bca"><span class="tab-icon">🏦</span><span class="tab-label">BCA</span></button>
-            <button class="bank-tab" data-bank="bni"><span class="tab-icon">🏦</span><span class="tab-label">BNI</span></button>
-            <button class="bank-tab" data-bank="bsi"><span class="tab-icon">🏦</span><span class="tab-label">BSI</span></button>
-            <button class="bank-tab" data-bank="danamon"><span class="tab-icon">🏦</span><span class="tab-label">Danamon</span></button>
-            <button class="bank-tab" data-bank="mandiri"><span class="tab-icon">🏦</span><span class="tab-label">Mandiri</span></button>
-            <button class="bank-tab" data-bank="bankjakarta"><span class="tab-icon">🏦</span><span class="tab-label">Bank Jakarta</span></button>
-        </nav>
-
-        <!-- Sub Tabs -->
-        <div class="sub-tabs" id="subTabs">
-            <button class="sub-tab active" data-type="tahunan"><span class="sub-icon">📊</span> Rekap Tahunan</button>
-            <button class="sub-tab" data-type="harian"><span class="sub-icon">📋</span> Rekap Harian</button>
-        </div>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <section class="upload-section" id="uploadSection">
-                <div class="upload-header">
-                    <h2 id="sectionTitle">BCA - Rekap Tahunan</h2>
-                    <p class="upload-desc">Upload file PDF rekening koran. Semua proses berjalan di browser — data Anda <strong>tidak dikirim ke server</strong>.</p>
-                </div>
-
-                <div class="password-row" id="passwordRow">
-                    <label for="pdfPassword">🔒 Password PDF (jika ada):</label>
-                    <input type="password" id="pdfPassword" placeholder="Masukkan password PDF..." autocomplete="off">
-                    <button class="btn-toggle-pass" onclick="togglePassword()" title="Tampilkan/sembunyikan password">👁</button>
-                </div>
-
-                <div class="meta-fields" id="metaFields">
-                    <div class="meta-row"><label for="metaNamaRM">Nama RM:</label><input type="text" id="metaNamaRM" placeholder="Nama RM..."></div>
-                    <div class="meta-row"><label for="metaBankRK">Nama Bank Rek Koran:</label><input type="text" id="metaBankRK" placeholder="Nama bank sesuai menu..."></div>
-                    <div class="meta-row"><label for="metaNamaGroup">Nama Group:</label><input type="text" id="metaNamaGroup" placeholder="Nama group (opsional)..."></div>
-                    <div class="meta-row"><label for="metaJenisRek">Jenis Rekening:</label><input type="text" id="metaJenisRek" placeholder="Giro / Tabungan..."></div>
-                </div>
-
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">
-                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                            <path d="M24 32V16M24 16L18 22M24 16L30 22" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M8 32V36C8 38.2 9.8 40 12 40H36C38.2 40 40 38.2 40 36V32" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    <p class="upload-text">Drag & drop file PDF di sini</p>
-                    <p class="upload-subtext">atau klik untuk memilih file</p>
-                    <input type="file" id="fileInput" accept=".pdf" multiple hidden>
-                </div>
-
-                <div class="file-list" id="fileList" style="display:none;">
-                    <div class="file-list-header">
-                        <h3>📁 File yang dipilih</h3>
-                        <button class="btn-clear" onclick="clearFiles()">✕ Hapus Semua</button>
-                    </div>
-                    <div class="file-items" id="fileItems"></div>
-                </div>
-
-                <div class="action-row" id="actionRow" style="display:none;">
-                    <button class="btn-process" id="btnProcess" onclick="processFiles()">
-                        <span class="btn-icon">⚡</span> Proses Ekstraksi
-                    </button>
-                </div>
-
-                <div class="progress-section" id="progressSection" style="display:none;">
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar" id="progressBar"></div>
-                    </div>
-                    <p class="progress-text" id="progressText">Memproses...</p>
-                </div>
-            </section>
-
-            <section class="results-section" id="resultsSection" style="display:none;">
-                <div class="results-header">
-                    <h2>📋 Hasil Ekstraksi</h2>
-                    <div class="results-actions">
-                        <button class="btn-secondary" onclick="resetApp()">🔄 Upload Baru</button>
-                        <button class="btn-primary" id="btnDownload" onclick="downloadExcel()">
-                            <span>📥</span> Download Excel
-                        </button>
-                    </div>
-                </div>
-                <div class="info-cards" id="infoCards"></div>
                 <div class="preview-tabs" id="previewTabs"></div>
                 <div class="preview-content" id="previewContent"></div>
             </section>
@@ -242,18 +128,18 @@
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 
     <!-- Parsers (order matters: base first) -->
-    <script src="js/utils.js?v=15"></script>
-    <script src="js/parsers/base-parser.js?v=15"></script>
-    <script src="js/parsers/bca-parser.js?v=15"></script>
-    <script src="js/parsers/bni-parser.js?v=15"></script>
-    <script src="js/parsers/bri-parser.js?v=15"></script>
-    <script src="js/parsers/bsi-parser.js?v=15"></script>
-    <script src="js/parsers/danamon-parser.js?v=15"></script>
-    <script src="js/parsers/mandiri-parser.js?v=15"></script>
-    <script src="js/parsers/bankjakarta-parser.js?v=15"></script>
-    <script src="js/parsers/index.js?v=15"></script>
+    <script src="js/utils.js?v=16"></script>
+    <script src="js/parsers/base-parser.js?v=16"></script>
+    <script src="js/parsers/bca-parser.js?v=16"></script>
+    <script src="js/parsers/bni-parser.js?v=16"></script>
+    <script src="js/parsers/bri-parser.js?v=16"></script>
+    <script src="js/parsers/bsi-parser.js?v=16"></script>
+    <script src="js/parsers/danamon-parser.js?v=16"></script>
+    <script src="js/parsers/mandiri-parser.js?v=16"></script>
+    <script src="js/parsers/bankjakarta-parser.js?v=16"></script>
+    <script src="js/parsers/index.js?v=16"></script>
 
     <!-- App -->
-    <script src="js/app.js?v=15"></script>
+    <script src="js/app.js?v=16"></script>
 </body>
 </html>
