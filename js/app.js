@@ -40,6 +40,15 @@ function initTabs() {
             currentBank = tab.dataset.bank;
             updateTitle();
             resetApp();
+            if (currentBank === 'danamon') {
+                document.getElementById('fileInput').accept = '.pdf,image/png,image/jpeg,image/jpg';
+                document.getElementById('uploadTextMain').textContent = 'Drag & drop file PDF / Gambar di sini';
+                document.getElementById('uploadTextSub').textContent = 'atau klik untuk memilih file (Danamon bisa gambar)';
+            } else {
+                document.getElementById('fileInput').accept = '.pdf';
+                document.getElementById('uploadTextMain').textContent = 'Drag & drop file PDF di sini';
+                document.getElementById('uploadTextSub').textContent = 'atau klik untuk memilih file';
+            }
         });
     });
 
@@ -64,7 +73,11 @@ function initUpload() {
     uploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
-        addFiles(Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.pdf')));
+        addFiles(Array.from(e.dataTransfer.files).filter(f => {
+            const name = f.name.toLowerCase();
+            if (currentBank === 'danamon') return name.endsWith('.pdf') || f.type.startsWith('image/');
+            return name.endsWith('.pdf');
+        }));
     });
 
     fileInput.addEventListener('change', (e) => {
@@ -160,10 +173,18 @@ async function processFiles() {
         const startTime = Date.now();
 
         try {
-            const result = await processOnePDF(file, password, (progress, msg) => {
-                progressBar.style.width = `${progress}%`;
-                if (msg) progressText.textContent = msg;
-            });
+            let result;
+            if (file.type.startsWith('image/') && currentBank === 'danamon') {
+                result = await processOneImage(file, password, (progress, msg) => {
+                    progressBar.style.width = `${progress}%`;
+                    if (msg) progressText.textContent = msg;
+                });
+            } else {
+                result = await processOnePDF(file, password, (progress, msg) => {
+                    progressBar.style.width = `${progress}%`;
+                    if (msg) progressText.textContent = msg;
+                });
+            }
 
             progressBar.style.width = '100%';
             const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -198,6 +219,71 @@ async function processFiles() {
  * 2. If page is image-based (text < 50 chars), render to canvas → Tesseract OCR
  * 3. Pass all page texts to the appropriate bank parser
  */
+
+async function processOneImage(file, password, onProgress) {
+    onProgress(10, `Memuat gambar: ${file.name}...`);
+    
+    const objUrl = URL.createObjectURL(file);
+    const img = new Image();
+    
+    await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = objUrl;
+    });
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(objUrl);
+    
+    onProgress(30, `Pre-processing gambar...`);
+    
+    // Binarization (threshold 160)
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const dataBytes = imageData.data;
+    for (let j = 0; j < dataBytes.length; j += 4) {
+        const avg = (dataBytes[j] + dataBytes[j + 1] + dataBytes[j + 2]) / 3;
+        const color = avg > 160 ? 255 : 0; 
+        dataBytes[j] = color;
+        dataBytes[j + 1] = color;
+        dataBytes[j + 2] = color;
+    }
+    ctx.putImageData(imageData, 0, 0);
+    
+    onProgress(50, `Membaca teks (OCR)...`);
+    
+    const ocrWorker = await Tesseract.createWorker('eng+ind');
+    await ocrWorker.setParameters({
+        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,/-:() \n\r\t',
+        preserve_interword_spaces: '1',
+    });
+    
+    const { data: ocrData } = await ocrWorker.recognize(canvas);
+    const text = ocrData.text;
+    await ocrWorker.terminate();
+    
+    onProgress(90, `Parsing data...`);
+    
+    const pages = [{ text, pageNum: 1, tables: [], isImage: true }];
+    const parser = window.Parsers[currentBank];
+    const { transactions, openingBalance, closingBalance, totalDebit, totalCredit } = parser.parse(pages, { filename: file.name });
+    
+    const meta = getMetaFields();
+    return {
+        fileName: file.name,
+        bank: currentBank,
+        meta,
+        transactions,
+        openingBalance,
+        closingBalance,
+        totalDebit,
+        totalCredit
+    };
+}
+
 async function processOnePDF(file, password, onProgress) {
     const arrayBuffer = await file.arrayBuffer();
     
