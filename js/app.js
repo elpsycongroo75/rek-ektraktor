@@ -302,7 +302,67 @@ function groupByAccount(results) {
         if (!groups[key]) {
             groups[key] = { accountNo: r.accountNo, accountName: r.accountName, branch: r.branch, bankName: r.bankName, months: {} };
         }
-        if (r.month) groups[key].months[r.month] = r;
+        
+        // Auto-split multi-month PDFs based on transaction dates
+        const txnsByMonth = {};
+        for (const txn of r.transactions || []) {
+            let txnMonth = r.month;
+            if (txn.date && txn.date.includes('/')) {
+                const parts = txn.date.split('/');
+                if (parts.length >= 2) txnMonth = parseInt(parts[1], 10);
+            } else if (txn.date && txn.date.includes('-')) {
+                // BNI uses DD-MMM
+                const parts = txn.date.split('-');
+                if (parts.length >= 2) {
+                    const mStr = parts[1].toLowerCase();
+                    const monthMap = { jan:1, feb:2, mar:3, apr:4, may:5, mei:5, jun:6, jul:7, aug:8, agu:8, sep:9, oct:10, okt:10, nov:11, dec:12, des:12 };
+                    if (monthMap[mStr]) txnMonth = monthMap[mStr];
+                }
+            }
+            
+            if (txnMonth) {
+                if (!txnsByMonth[txnMonth]) txnsByMonth[txnMonth] = [];
+                txnsByMonth[txnMonth].push(txn);
+            }
+        }
+        
+        const monthKeys = Object.keys(txnsByMonth);
+        if (monthKeys.length > 1) {
+            let prevClose = r.openingBalance || 0;
+            monthKeys.sort((a, b) => parseInt(a) - parseInt(b)).forEach((mStr, idx) => {
+                const m = parseInt(mStr);
+                const mTxns = txnsByMonth[m];
+                let mDebit = 0, mCredit = 0;
+                mTxns.forEach(t => { mDebit += (t.debit||0); mCredit += (t.credit||0); });
+                
+                const mOpen = (idx === 0) ? (r.openingBalance || 0) : prevClose;
+                const mClose = (idx === monthKeys.length - 1 && r.closingBalance) 
+                                ? r.closingBalance 
+                                : mOpen - mDebit + mCredit;
+                
+                prevClose = mClose;
+                
+                groups[key].months[m] = {
+                    ...r,
+                    month: m,
+                    transactions: mTxns,
+                    openingBalance: mOpen,
+                    closingBalance: mClose,
+                    totalDebit: mDebit,
+                    totalCredit: mCredit
+                };
+            });
+        } else if (monthKeys.length === 1) {
+            const m = parseInt(monthKeys[0]);
+            r.month = m;
+            groups[key].months[m] = r;
+        } else if (r.month) {
+            groups[key].months[r.month] = r;
+        } else {
+            // Safe fallback
+            r.month = 1;
+            groups[key].months[1] = r;
+        }
     }
     return Object.values(groups);
 }

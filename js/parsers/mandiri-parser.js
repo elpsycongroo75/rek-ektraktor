@@ -134,23 +134,22 @@ class MandiriParser extends BaseParser {
                 }
 
                 // Saldo Awal line: "01/01 Saldo Awal AMOUNT"
-                const saldoAwalMatch = line.match(/^(\d{2}\/\d{2})\s+Saldo\s+Awal\s+([\d,]+\.\d{2})/i);
+                const saldoAwalMatch = line.match(/^.*?(\d{2}[/l1I\.\-]\d{2})\s+Saldo\s+Awal\s+([\d,]+\.\d{2})/i);
                 if (saldoAwalMatch) {
-                    openingBalance = this.parseAmount(saldoAwalMatch[2]);
+                    const parsedOp = this.parseAmount(saldoAwalMatch[2]);
                     transactions.push({
-                        date: this.parseDate(saldoAwalMatch[1], year),
-                        dateStr: saldoAwalMatch[1],
+                        date: saldoAwalMatch[1], // Store as string
                         description: 'Saldo Awal',
                         debit: 0,
                         credit: 0,
-                        balance: this.parseAmount(saldoAwalMatch[2])
+                        balance: parsedOp
                     });
                     i++;
                     continue;
                 }
 
                 // Transaction: "DD/MM DD/MM -description amount [D] balance"
-                const txnMatch = line.match(/^(\d{2}\/\d{2})\s+(\d{2}\/\d{2})\s+(.+)/);
+                const txnMatch = line.match(/^.*?(\d{2}[/l1I\.\-]\d{2})\s+(\d{2}[/l1I\.\-]\d{2})\s+(.+)/i);
                 if (txnMatch) {
                     const dateStr = txnMatch[1];
                     let rest = txnMatch[3];
@@ -161,7 +160,7 @@ class MandiriParser extends BaseParser {
 
                     // Try extracting amount and balance from this line
                     // Pattern 1: description AMOUNT D BALANCE
-                    let m = rest.match(/^(.+?)\s+([\d,]+\.\d{2})\s+D\s+([\d,]+\.\d{2})\s*$/);
+                    let m = rest.match(/^(.+?)\s+([\d,]+\.\d{2})\s+D\s+([\d,]+\.\d{2})\s*$/i);
                     if (m) {
                         description = m[1].trim();
                         amount = this.parseAmount(m[2]);
@@ -249,12 +248,11 @@ class MandiriParser extends BaseParser {
 
                     if (amount > 0 || balance > 0) {
                         transactions.push({
-                            date: this.parseDate(dateStr, year),
-                            dateStr,
-                            description: description || 'N/A',
+                            date: dateStr, // store as string for consistency with other parsers
+                            description: description,
                             debit: isDebit ? amount : 0,
-                            credit: isDebit ? 0 : amount,
-                            balance
+                            credit: !isDebit ? amount : 0,
+                            balance: balance
                         });
                     }
 
