@@ -5,5 +5,5 @@ window.Parsers = {
     bsi: new BSIParser(),
     danamon: new DanamonParser(),
     mandiri: new MandiriParser(),
-    bankjakarta: new BankJakartaParser()
+    bankdaerah: new BankDaerahParser()
 };

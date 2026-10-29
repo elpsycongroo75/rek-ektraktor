@@ -1,12 +1,12 @@
 /**
- * Bank Jakarta (DKI) Statement Parser
+ * Bank Daerah Statement Parser
  * Format: Laporan Rekening Koran (Account Statement Report)
  * Clean text-based format with well-structured tables
  * Columns: Posting Date | Remark | Reference No | Debit | Credit | Balance
  */
-class BankJakartaParser extends BaseParser {
+class BankDaerahParser extends BaseParser {
     constructor() {
-        super('BANK JAKARTA');
+        super('BANK DAERAH');
     }
 
     parse(pages, metadata = {}) {
@@ -30,7 +30,7 @@ class BankJakartaParser extends BaseParser {
             accountName = accMatch[2].trim();
         }
 
-        // Branch BANK DKI-CAB TANJUNG PRIOK
+        // Branch Bank Daerah / BPD-CAB TANJUNG PRIOK
         const branchMatch = allText.match(/Branch\s+(.+)/i);
         if (branchMatch) branch = branchMatch[1].trim();
 
@@ -61,7 +61,7 @@ class BankJakartaParser extends BaseParser {
         // Extract transactions
         const transactions = [];
 
-        // Try table data first (most reliable for Bank Jakarta)
+        // Try table data first (most reliable for Bank Daerah / BPD)
         for (const page of pages) {
             if (page.tables) {
                 for (const table of page.tables) {

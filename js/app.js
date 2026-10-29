@@ -13,7 +13,7 @@ let activePreviewTab = 0;
 
 const bankNames = {
     'bca': 'BCA', 'bni': 'BNI', 'bsi': 'BSI',
-    'danamon': 'Danamon', 'mandiri': 'Mandiri', 'bankjakarta': 'Bank Jakarta'
+    'danamon': 'Danamon', 'mandiri': 'Mandiri', 'bankdaerah': 'Bank Daerah'
 };
 
 function getMetaFields() {

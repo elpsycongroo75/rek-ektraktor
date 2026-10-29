@@ -13,14 +13,14 @@ fs.writeFileSync(path.join(destDir, 'base-parser.js'), base.trim() + '\n');
 console.log('✓ base-parser.js');
 
 // Convert each parser
-const parsers = ['bca-parser', 'bni-parser', 'bsi-parser', 'danamon-parser', 'mandiri-parser', 'bankjakarta-parser'];
+const parsers = ['bca-parser', 'bni-parser', 'bsi-parser', 'danamon-parser', 'mandiri-parser', 'bankdaerah-parser'];
 const classNames = {
     'bca-parser': 'BCAParser',
     'bni-parser': 'BNIParser', 
     'bsi-parser': 'BSIParser',
     'danamon-parser': 'DanamonParser',
     'mandiri-parser': 'MandiriParser',
-    'bankjakarta-parser': 'BankJakartaParser'
+    'bankdaerah-parser': 'BankDaerahParser'
 };
 const keys = {
     'bca-parser': 'bca',
@@ -28,7 +28,7 @@ const keys = {
     'bsi-parser': 'bsi',
     'danamon-parser': 'danamon',
     'mandiri-parser': 'mandiri',
-    'bankjakarta-parser': 'bankjakarta'
+    'bankdaerah-parser': 'bankdaerah'
 };
 
 for (const p of parsers) {
